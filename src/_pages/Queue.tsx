@@ -10,6 +10,7 @@ import {
   ToastMessage
 } from "../components/ui/toast"
 import QueueCommands from "../components/Queue/QueueCommands"
+import { Button } from "../components/ui/button"
 
 interface QueueProps {
   setView: React.Dispatch<React.SetStateAction<ViewType>>
@@ -151,6 +152,13 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
             screenshots={screenshots}
             onTooltipVisibilityChange={handleTooltipVisibilityChange}
           />
+          <Button
+            onClick={() => setView('insights')}
+            variant="ghost"
+            className="mt-3 w-full text-sm text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500"
+          >
+            View Productivity Insights →
+          </Button>
         </div>
       </div>
     </div>
