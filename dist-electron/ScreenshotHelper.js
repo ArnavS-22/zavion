@@ -17,6 +17,10 @@ class ScreenshotHelper {
     screenshotDir;
     extraScreenshotDir;
     view = "queue";
+    // Automatic screenshot functionality
+    automaticInterval = null;
+    isAutomaticEnabled = false;
+    processingHelper = null;
     constructor(view = "queue") {
         this.view = view;
         // Initialize directories
@@ -29,6 +33,9 @@ class ScreenshotHelper {
         if (!node_fs_1.default.existsSync(this.extraScreenshotDir)) {
             node_fs_1.default.mkdirSync(this.extraScreenshotDir);
         }
+    }
+    setProcessingHelper(processingHelper) {
+        this.processingHelper = processingHelper;
     }
     getView() {
         return this.view;
@@ -123,6 +130,46 @@ class ScreenshotHelper {
             console.error("Error deleting file:", error);
             return { success: false, error: error.message };
         }
+    }
+    startAutomaticScreenshots(intervalMs, hideMainWindow, showMainWindow) {
+        if (this.automaticInterval) {
+            this.stopAutomaticScreenshots();
+        }
+        this.isAutomaticEnabled = true;
+        this.automaticInterval = setInterval(async () => {
+            if (this.isAutomaticEnabled) {
+                try {
+                    console.log("Taking automatic screenshot...");
+                    // Take screenshot for productivity tracking (separate from queue)
+                    const productivityScreenshotPath = node_path_1.default.join(this.screenshotDir, `productivity_${(0, uuid_1.v4)()}.png`);
+                    hideMainWindow();
+                    await (0, screenshot_desktop_1.default)({ filename: productivityScreenshotPath });
+                    showMainWindow();
+                    // Process for productivity analysis
+                    if (this.processingHelper) {
+                        await this.processingHelper.processAutomaticScreenshot(productivityScreenshotPath);
+                    }
+                    else {
+                        console.error("ProcessingHelper not set - cannot process automatic screenshot");
+                    }
+                }
+                catch (error) {
+                    console.error("Automatic screenshot failed:", error);
+                }
+            }
+        }, intervalMs);
+        console.log("Automatic screenshots started");
+    }
+    stopAutomaticScreenshots() {
+        if (this.automaticInterval) {
+            clearInterval(this.automaticInterval);
+            this.automaticInterval = null;
+        }
+        this.isAutomaticEnabled = false;
+        console.log("Automatic screenshots stopped");
+    }
+    isAutomaticActive() {
+        return this.isAutomaticEnabled && this.automaticInterval !== null;
     }
 }
 exports.ScreenshotHelper = ScreenshotHelper;

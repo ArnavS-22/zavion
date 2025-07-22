@@ -6,81 +6,74 @@ class ShortcutsHelper {
     appState;
     constructor(appState) {
         this.appState = appState;
+        this.setupIpcHandlers();
     }
     registerGlobalShortcuts() {
+        // Toggle window visibility
+        electron_1.globalShortcut.register("CommandOrControl+Shift+H", () => {
+            this.appState.toggleMainWindow();
+        });
+        // Take screenshot
         electron_1.globalShortcut.register("CommandOrControl+H", async () => {
             const mainWindow = this.appState.getMainWindow();
-            if (mainWindow) {
+            if (!mainWindow || !this.appState.isVisible()) {
+                console.log("Main window is not visible. Skipping screenshot.");
+                return;
+            }
+            try {
+                const screenshotPath = await this.appState.takeScreenshot();
+                const preview = await this.appState.getImagePreview(screenshotPath);
+                mainWindow.webContents.send("screenshot-taken", {
+                    path: screenshotPath,
+                    preview
+                });
                 console.log("Taking screenshot...");
-                try {
-                    const screenshotPath = await this.appState.takeScreenshot();
-                    const preview = await this.appState.getImagePreview(screenshotPath);
-                    mainWindow.webContents.send("screenshot-taken", {
-                        path: screenshotPath,
-                        preview
-                    });
-                }
-                catch (error) {
-                    console.error("Error capturing screenshot:", error);
-                }
+                console.log({ view: this.appState.getView() });
+                console.log(screenshotPath);
+            }
+            catch (error) {
+                console.error("Error taking screenshot:", error);
             }
         });
-        electron_1.globalShortcut.register("CommandOrControl+Enter", async () => {
+        // Process screenshots
+        electron_1.globalShortcut.register("CommandOrControl+Return", async () => {
+            console.log("Processing screenshots...");
             await this.appState.processingHelper.processScreenshots();
         });
+        // Reset view
         electron_1.globalShortcut.register("CommandOrControl+R", () => {
-            console.log("Command + R pressed. Canceling requests and resetting queues...");
-            // Cancel ongoing API requests
-            this.appState.processingHelper.cancelOngoingRequests();
-            // Clear both screenshot queues
+            console.log("Resetting view...");
             this.appState.clearQueues();
-            console.log("Cleared queues.");
-            // Update the view state to 'queue'
-            this.appState.setView("queue");
-            // Notify renderer process to switch view to 'queue'
             const mainWindow = this.appState.getMainWindow();
-            if (mainWindow && !mainWindow.isDestroyed()) {
+            if (mainWindow) {
                 mainWindow.webContents.send("reset-view");
             }
         });
-        // New shortcuts for moving the window
-        electron_1.globalShortcut.register("CommandOrControl+Left", () => {
-            console.log("Command/Ctrl + Left pressed. Moving window left.");
-            this.appState.moveWindowLeft();
-        });
-        electron_1.globalShortcut.register("CommandOrControl+Right", () => {
-            console.log("Command/Ctrl + Right pressed. Moving window right.");
+        // Move window shortcuts
+        electron_1.globalShortcut.register("Control+Shift+Right", () => {
             this.appState.moveWindowRight();
         });
-        electron_1.globalShortcut.register("CommandOrControl+Down", () => {
-            console.log("Command/Ctrl + down pressed. Moving window down.");
+        electron_1.globalShortcut.register("Control+Shift+Left", () => {
+            this.appState.moveWindowLeft();
+        });
+        electron_1.globalShortcut.register("Control+Shift+Down", () => {
             this.appState.moveWindowDown();
         });
-        electron_1.globalShortcut.register("CommandOrControl+Up", () => {
-            console.log("Command/Ctrl + Up pressed. Moving window Up.");
+        electron_1.globalShortcut.register("Control+Shift+Up", () => {
             this.appState.moveWindowUp();
         });
-        electron_1.globalShortcut.register("CommandOrControl+B", () => {
-            this.appState.toggleMainWindow();
-            // If window exists and we're showing it, bring it to front
-            const mainWindow = this.appState.getMainWindow();
-            if (mainWindow && !this.appState.isVisible()) {
-                // Force the window to the front on macOS
-                if (process.platform === "darwin") {
-                    mainWindow.setAlwaysOnTop(true, "normal");
-                    // Reset alwaysOnTop after a brief delay
-                    setTimeout(() => {
-                        if (mainWindow && !mainWindow.isDestroyed()) {
-                            mainWindow.setAlwaysOnTop(true, "floating");
-                        }
-                    }, 100);
-                }
-            }
+        console.log("Global shortcuts registered");
+    }
+    setupIpcHandlers() {
+        electron_1.ipcMain.handle("move-window-left", () => {
+            this.appState.moveWindowLeft();
         });
-        // Unregister shortcuts when quitting
-        electron_1.app.on("will-quit", () => {
-            electron_1.globalShortcut.unregisterAll();
+        electron_1.ipcMain.handle("move-window-right", () => {
+            this.appState.moveWindowRight();
         });
+    }
+    unregisterAllShortcuts() {
+        electron_1.globalShortcut.unregisterAll();
     }
 }
 exports.ShortcutsHelper = ShortcutsHelper;

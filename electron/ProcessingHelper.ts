@@ -2,6 +2,8 @@
 
 import { AppState } from "./main"
 import { LLMHelper } from "./LLMHelper"
+import { StorageHelper } from "./StorageHelper"
+import fs from "fs"
 import dotenv from "dotenv"
 
 dotenv.config()
@@ -154,5 +156,30 @@ export class ProcessingHelper {
 
   public getLLMHelper() {
     return this.llmHelper;
+  }
+
+  public async processAutomaticScreenshot(screenshotPath: string): Promise<void> {
+    try {
+      console.log("Processing automatic screenshot for productivity analysis...")
+      
+      // Get productivity classification from LLM
+      const classification = await this.llmHelper.classifyProductivityActivity(screenshotPath)
+      
+      // Store in Supabase
+      const result = await StorageHelper.storeActivityRecord(classification)
+      
+      if (result.success) {
+        console.log("Activity record stored successfully")
+      } else {
+        console.error("Failed to store activity record:", result.error)
+      }
+      
+      // Delete screenshot file for privacy
+      await fs.promises.unlink(screenshotPath)
+      console.log("Screenshot file deleted")
+      
+    } catch (error) {
+      console.error("Automatic screenshot processing failed:", error)
+    }
   }
 }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react"
 import { useQuery } from "react-query"
+import { ViewType } from "../types/navigation"
 import ScreenshotQueue from "../components/Queue/ScreenshotQueue"
 import {
   Toast,
@@ -11,7 +12,7 @@ import {
 import QueueCommands from "../components/Queue/QueueCommands"
 
 interface QueueProps {
-  setView: React.Dispatch<React.SetStateAction<"queue" | "solutions" | "debug">>
+  setView: React.Dispatch<React.SetStateAction<ViewType>>
 }
 
 const Queue: React.FC<QueueProps> = ({ setView }) => {

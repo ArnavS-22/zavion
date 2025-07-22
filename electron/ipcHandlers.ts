@@ -2,6 +2,7 @@
 
 import { ipcMain, app } from "electron"
 import { AppState } from "./main"
+import { StorageHelper } from "./StorageHelper"
 
 export function initializeIpcHandlers(appState: AppState): void {
   ipcMain.handle(
@@ -105,5 +106,109 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   ipcMain.handle("quit-app", () => {
     app.quit()
+  })
+
+  // ===== PRODUCTIVITY INSIGHTS HANDLERS =====
+  
+  // Handler for generating daily insights
+  ipcMain.handle("generate-daily-insights", async (event, date?: string) => {
+    try {
+      console.log("[IPC] Generating daily insights for:", date || "today")
+      
+      const targetDate = date ? new Date(date) : new Date()
+      
+      // Get daily stats first (quick info)
+      const stats = await StorageHelper.getDailyStats(targetDate)
+      console.log("[IPC] Daily stats:", stats)
+      
+      // Get all activities for the day
+      const activities = await StorageHelper.getDailyActivities(targetDate)
+      console.log(`[IPC] Found ${activities.length} activities`)
+      
+      // Check if we have enough data
+      if (activities.length < 5) {
+        return {
+          success: false,
+          error: "Need at least 5 activities to generate meaningful insights",
+          data: {
+            stats,
+            activities: activities.length,
+            minRequired: 5
+          }
+        }
+      }
+      
+      // Generate insights using LLM
+      const insights = await appState.processingHelper?.getLLMHelper()
+        .generateDailyInsights(activities)
+      
+      if (!insights) {
+        throw new Error("Failed to generate insights from LLM")
+      }
+      
+      console.log("[IPC] Insights generated successfully")
+      
+      return {
+        success: true,
+        data: {
+          insights,
+          stats,
+          date: targetDate.toISOString(),
+          activityCount: activities.length
+        }
+      }
+    } catch (error: any) {
+      console.error("[IPC] Error generating daily insights:", error)
+      return {
+        success: false,
+        error: error.message || "Unknown error occurred"
+      }
+    }
+  })
+  
+  // Handler for getting daily stats only (quick check)
+  ipcMain.handle("get-daily-stats", async (event, date?: string) => {
+    try {
+      const targetDate = date ? new Date(date) : new Date()
+      const stats = await StorageHelper.getDailyStats(targetDate)
+      
+      return {
+        success: true,
+        data: stats
+      }
+    } catch (error: any) {
+      console.error("[IPC] Error getting daily stats:", error)
+      return {
+        success: false,
+        error: error.message
+      }
+    }
+  })
+  
+  // Handler for getting hourly breakdown (for charts)
+  ipcMain.handle("get-hourly-breakdown", async (event, date?: string) => {
+    try {
+      const targetDate = date ? new Date(date) : new Date()
+      const hourlyData = await StorageHelper.getHourlyBreakdown(targetDate)
+      
+      // Convert Map to array for IPC transfer
+      const breakdown = Array.from(hourlyData.entries()).map(([hour, activities]) => ({
+        hour,
+        count: activities.length,
+        focusCount: activities.filter(a => a.cognitive_state === 'deep_focus').length,
+        goalRelatedCount: activities.filter(a => a.goal_relevance === 'goal_related').length
+      }))
+      
+      return {
+        success: true,
+        data: breakdown
+      }
+    } catch (error: any) {
+      console.error("[IPC] Error getting hourly breakdown:", error)
+      return {
+        success: false,
+        error: error.message
+      }
+    }
   })
 }

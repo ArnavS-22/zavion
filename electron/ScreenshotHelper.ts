@@ -16,6 +16,11 @@ export class ScreenshotHelper {
 
   private view: "queue" | "solutions" = "queue"
 
+  // Automatic screenshot functionality
+  private automaticInterval: NodeJS.Timeout | null = null
+  private isAutomaticEnabled: boolean = false
+  private processingHelper: any = null
+
   constructor(view: "queue" | "solutions" = "queue") {
     this.view = view
 
@@ -33,6 +38,10 @@ export class ScreenshotHelper {
     if (!fs.existsSync(this.extraScreenshotDir)) {
       fs.mkdirSync(this.extraScreenshotDir)
     }
+  }
+
+  public setProcessingHelper(processingHelper: any): void {
+    this.processingHelper = processingHelper
   }
 
   public getView(): "queue" | "solutions" {
@@ -146,5 +155,56 @@ export class ScreenshotHelper {
       console.error("Error deleting file:", error)
       return { success: false, error: error.message }
     }
+  }
+
+  public startAutomaticScreenshots(
+    intervalMs: number,
+    hideMainWindow: () => void,
+    showMainWindow: () => void
+  ): void {
+    if (this.automaticInterval) {
+      this.stopAutomaticScreenshots()
+    }
+
+    this.isAutomaticEnabled = true
+    this.automaticInterval = setInterval(async () => {
+      if (this.isAutomaticEnabled) {
+        try {
+          console.log("Taking automatic screenshot...")
+          
+          // Take screenshot for productivity tracking (separate from queue)
+          const productivityScreenshotPath = path.join(this.screenshotDir, `productivity_${uuidv4()}.png`)
+          
+          hideMainWindow()
+          await screenshot({ filename: productivityScreenshotPath })
+          showMainWindow()
+          
+          // Process for productivity analysis
+          if (this.processingHelper) {
+            await this.processingHelper.processAutomaticScreenshot(productivityScreenshotPath)
+          } else {
+            console.error("ProcessingHelper not set - cannot process automatic screenshot")
+          }
+          
+        } catch (error) {
+          console.error("Automatic screenshot failed:", error)
+        }
+      }
+    }, intervalMs)
+
+    console.log("Automatic screenshots started")
+  }
+
+  public stopAutomaticScreenshots(): void {
+    if (this.automaticInterval) {
+      clearInterval(this.automaticInterval)
+      this.automaticInterval = null
+    }
+    this.isAutomaticEnabled = false
+    console.log("Automatic screenshots stopped")
+  }
+
+  public isAutomaticActive(): boolean {
+    return this.isAutomaticEnabled && this.automaticInterval !== null
   }
 }

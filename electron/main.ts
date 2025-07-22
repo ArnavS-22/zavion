@@ -4,6 +4,70 @@ import { WindowHelper } from "./WindowHelper"
 import { ScreenshotHelper } from "./ScreenshotHelper"
 import { ShortcutsHelper } from "./shortcuts"
 import { ProcessingHelper } from "./ProcessingHelper"
+import { StorageHelper } from "./StorageHelper"
+import dotenv from "dotenv"
+import path from "path"
+
+// Load environment variables before anything else
+const envPath = path.join(__dirname, '..', '.env')
+const envResult = dotenv.config({ path: envPath })
+
+if (envResult.error) {
+  console.error(`Failed to load .env file from ${envPath}:`, envResult.error)
+  process.exit(1)
+}
+
+// Validate critical environment variables
+const validateEnvironment = (): { valid: boolean; errors: string[] } => {
+  const errors: string[] = []
+  const required = {
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY
+  }
+
+  for (const [key, value] of Object.entries(required)) {
+    if (!value) {
+      errors.push(`Missing required environment variable: ${key}`)
+    }
+  }
+
+  if (errors.length > 0) {
+    errors.forEach(error => console.error(`❌ ${error}`))
+  }
+
+  return { valid: errors.length === 0, errors }
+}
+
+// Initialize core services before creating AppState
+let servicesInitialized = false
+
+const initializeCoreServices = (): boolean => {
+  try {
+    // Validate environment first
+    const envValidation = validateEnvironment()
+    if (!envValidation.valid) {
+      throw new Error("Environment validation failed")
+    }
+
+    // Initialize Supabase
+    const supabaseUrl = process.env.SUPABASE_URL!
+    const supabaseKey = process.env.SUPABASE_ANON_KEY!
+    
+    StorageHelper.initialize(supabaseUrl, supabaseKey)
+    console.log("✅ Supabase initialized successfully")
+    
+    servicesInitialized = true
+    return true
+  } catch (error) {
+    console.error("❌ Failed to initialize core services:", error)
+    servicesInitialized = false
+    return false
+  }
+}
+
+// Initialize services immediately
+initializeCoreServices()
 
 export class AppState {
   private static instance: AppState | null = null
@@ -11,7 +75,7 @@ export class AppState {
   private windowHelper: WindowHelper
   private screenshotHelper: ScreenshotHelper
   public shortcutsHelper: ShortcutsHelper
-  public processingHelper: ProcessingHelper
+  public processingHelper: ProcessingHelper | null = null
 
   // View management
   private view: "queue" | "solutions" = "queue"
@@ -22,40 +86,62 @@ export class AppState {
     output_format: Record<string, any>
     constraints: Array<Record<string, any>>
     test_cases: Array<Record<string, any>>
-  } | null = null // Allow null
+  } | null = null
 
   private hasDebugged: boolean = false
 
+  // Health monitoring
+  private healthStatus = {
+    supabase: servicesInitialized,
+    processingHelper: false,
+    automaticScreenshots: false
+  }
+
   // Processing events
   public readonly PROCESSING_EVENTS = {
-    //global states
     UNAUTHORIZED: "procesing-unauthorized",
     NO_SCREENSHOTS: "processing-no-screenshots",
-
-    //states for generating the initial solution
     INITIAL_START: "initial-start",
     PROBLEM_EXTRACTED: "problem-extracted",
     SOLUTION_SUCCESS: "solution-success",
     INITIAL_SOLUTION_ERROR: "solution-error",
-
-    //states for processing the debugging
     DEBUG_START: "debug-start",
     DEBUG_SUCCESS: "debug-success",
     DEBUG_ERROR: "debug-error"
   } as const
 
   constructor() {
-    // Initialize WindowHelper with this
+    console.log("🏗️ Initializing AppState...")
+    
+    // Initialize WindowHelper
     this.windowHelper = new WindowHelper(this)
 
     // Initialize ScreenshotHelper
     this.screenshotHelper = new ScreenshotHelper(this.view)
 
-    // Initialize ProcessingHelper
-    this.processingHelper = new ProcessingHelper(this)
+    // Initialize ProcessingHelper with error handling
+    try {
+      if (!process.env.GEMINI_API_KEY) {
+        throw new Error("GEMINI_API_KEY not found")
+      }
+      
+      this.processingHelper = new ProcessingHelper(this)
+      this.healthStatus.processingHelper = true
+      
+      // Connect ProcessingHelper to ScreenshotHelper
+      this.screenshotHelper.setProcessingHelper(this.processingHelper)
+      console.log("✅ ProcessingHelper initialized and connected")
+    } catch (error) {
+      console.error("❌ Failed to initialize ProcessingHelper:", error)
+      this.processingHelper = null
+      this.healthStatus.processingHelper = false
+    }
 
     // Initialize ShortcutsHelper
     this.shortcutsHelper = new ShortcutsHelper(this)
+    
+    // Log health status
+    console.log("📊 System Health:", this.healthStatus)
   }
 
   public static getInstance(): AppState {
@@ -63,6 +149,15 @@ export class AppState {
       AppState.instance = new AppState()
     }
     return AppState.instance
+  }
+
+  // Health check method
+  public isHealthy(): boolean {
+    return Object.values(this.healthStatus).every(status => status === true)
+  }
+
+  public getHealthStatus(): typeof this.healthStatus {
+    return { ...this.healthStatus }
   }
 
   // Getters and Setters
@@ -132,11 +227,7 @@ export class AppState {
 
   public clearQueues(): void {
     this.screenshotHelper.clearQueues()
-
-    // Clear problem info
     this.problemInfo = null
-
-    // Reset view to initial state
     this.setView("queue")
   }
 
@@ -152,6 +243,33 @@ export class AppState {
     return screenshotPath
   }
 
+  public startAutomaticScreenshots(): void {
+    // Validate system health before starting
+    if (!this.healthStatus.supabase) {
+      console.error("❌ Cannot start automatic screenshots: Supabase not initialized")
+      return
+    }
+    
+    if (!this.healthStatus.processingHelper) {
+      console.error("❌ Cannot start automatic screenshots: ProcessingHelper not initialized")
+      return
+    }
+    
+    try {
+      console.log("📸 Starting automatic screenshots for productivity tracking...")
+      this.screenshotHelper.startAutomaticScreenshots(
+        45000,
+        () => this.hideMainWindow(),
+        () => this.showMainWindow()
+      )
+      this.healthStatus.automaticScreenshots = true
+      console.log("✅ Automatic screenshots started successfully")
+    } catch (error) {
+      console.error("❌ Failed to start automatic screenshots:", error)
+      this.healthStatus.automaticScreenshots = false
+    }
+  }
+
   public async getImagePreview(filepath: string): Promise<string> {
     return this.screenshotHelper.getImagePreview(filepath)
   }
@@ -162,7 +280,7 @@ export class AppState {
     return this.screenshotHelper.deleteScreenshot(path)
   }
 
-  // New methods to move the window
+  // Window movement methods
   public moveWindowLeft(): void {
     this.windowHelper.moveWindowLeft()
   }
@@ -170,9 +288,11 @@ export class AppState {
   public moveWindowRight(): void {
     this.windowHelper.moveWindowRight()
   }
+
   public moveWindowDown(): void {
     this.windowHelper.moveWindowDown()
   }
+
   public moveWindowUp(): void {
     this.windowHelper.moveWindowUp()
   }
@@ -186,37 +306,79 @@ export class AppState {
   }
 }
 
-// Application initialization
+// Application initialization with proper error handling
 async function initializeApp() {
-  const appState = AppState.getInstance()
+  try {
+    console.log("🚀 Starting application initialization...")
+    
+    // Create AppState instance
+    const appState = AppState.getInstance()
 
-  // Initialize IPC handlers before window creation
-  initializeIpcHandlers(appState)
+    // Initialize IPC handlers
+    initializeIpcHandlers(appState)
 
-  app.whenReady().then(() => {
-    console.log("App is ready")
-    appState.createWindow()
-    // Register global shortcuts using ShortcutsHelper
-    appState.shortcutsHelper.registerGlobalShortcuts()
-  })
+    // Set up error handlers
+    process.on('uncaughtException', (error) => {
+      console.error('❌ Uncaught Exception:', error)
+      // In production, you'd want to log this to a service like Sentry
+    })
 
-  app.on("activate", () => {
-    console.log("App activated")
-    if (appState.getMainWindow() === null) {
+    process.on('unhandledRejection', (reason, promise) => {
+      console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason)
+      // In production, you'd want to log this to a service like Sentry
+    })
+
+    app.whenReady().then(async () => {
+      console.log("✅ Electron app is ready")
+      
+      // Create window
       appState.createWindow()
-    }
-  })
+      
+      // Register global shortcuts
+      appState.shortcutsHelper.registerGlobalShortcuts()
+      
+      // Wait a moment for window to be fully ready
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // Start automatic screenshots if core dependencies are ready
+      const health = appState.getHealthStatus()
+      if (health.supabase && health.processingHelper) {
+        appState.startAutomaticScreenshots()
+      } else {
+        console.error("❌ Core dependencies not ready, skipping automatic screenshots")
+        console.error("📊 Health status:", health)
+      }
+    })
 
-  // Quit when all windows are closed, except on macOS
-  app.on("window-all-closed", () => {
-    if (process.platform !== "darwin") {
-      app.quit()
-    }
-  })
+    app.on("activate", () => {
+      console.log("App activated")
+      if (appState.getMainWindow() === null) {
+        appState.createWindow()
+      }
+    })
 
-  app.dock?.hide() // Hide dock icon (optional)
-  app.commandLine.appendSwitch("disable-background-timer-throttling")
+    app.on("window-all-closed", () => {
+      if (process.platform !== "darwin") {
+        app.quit()
+      }
+    })
+
+    app.on('before-quit', () => {
+      console.log("🛑 App shutting down gracefully...")
+      // Here you could add cleanup logic
+    })
+
+    app.dock?.hide()
+    app.commandLine.appendSwitch("disable-background-timer-throttling")
+    
+  } catch (error) {
+    console.error("❌ Fatal error during initialization:", error)
+    process.exit(1)
+  }
 }
 
 // Start the application
-initializeApp().catch(console.error)
+initializeApp().catch(error => {
+  console.error("❌ Failed to initialize application:", error)
+  process.exit(1)
+})

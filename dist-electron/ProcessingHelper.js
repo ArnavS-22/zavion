@@ -6,6 +6,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProcessingHelper = void 0;
 const LLMHelper_1 = require("./LLMHelper");
+const StorageHelper_1 = require("./StorageHelper");
+const fs_1 = __importDefault(require("fs"));
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
 const isDev = process.env.NODE_ENV === "development";
@@ -134,6 +136,27 @@ class ProcessingHelper {
     }
     getLLMHelper() {
         return this.llmHelper;
+    }
+    async processAutomaticScreenshot(screenshotPath) {
+        try {
+            console.log("Processing automatic screenshot for productivity analysis...");
+            // Get productivity classification from LLM
+            const classification = await this.llmHelper.classifyProductivityActivity(screenshotPath);
+            // Store in Supabase
+            const result = await StorageHelper_1.StorageHelper.storeActivityRecord(classification);
+            if (result.success) {
+                console.log("Activity record stored successfully");
+            }
+            else {
+                console.error("Failed to store activity record:", result.error);
+            }
+            // Delete screenshot file for privacy
+            await fs_1.default.promises.unlink(screenshotPath);
+            console.log("Screenshot file deleted");
+        }
+        catch (error) {
+            console.error("Automatic screenshot processing failed:", error);
+        }
     }
 }
 exports.ProcessingHelper = ProcessingHelper;

@@ -32,6 +32,52 @@ interface ElectronAPI {
   analyzeAudioFile: (path: string) => Promise<{ text: string; timestamp: number }>
   analyzeImageFile: (path: string) => Promise<void>
   quitApp: () => Promise<void>
+
+  // PRODUCTIVITY TRACKING APIS
+  generateDailyInsights: (date?: string) => Promise<{
+    success: boolean
+    error?: string
+    data?: {
+      insights: {
+        executiveSummary: string
+        productivityNarrative: string
+        behavioralPatterns: string
+        recommendations: string
+      }
+      stats: {
+        totalRecords: number
+        hoursTracked: number
+        focusPercentage: number
+        topApp: string
+        dayStart: string
+        dayEnd: string
+      }
+      date: string
+      activityCount: number
+    }
+  }>
+  getDailyStats: (date?: string) => Promise<{
+    success: boolean
+    error?: string
+    data?: {
+      totalRecords: number
+      hoursTracked: number
+      focusPercentage: number
+      topApp: string
+      dayStart: string
+      dayEnd: string
+    }
+  }>
+  getHourlyBreakdown: (date?: string) => Promise<{
+    success: boolean
+    error?: string
+    data?: Array<{
+      hour: number
+      count: number
+      focusCount: number
+      goalRelatedCount: number
+    }>
+  }>
 }
 
 export const PROCESSING_EVENTS = {
@@ -162,8 +208,19 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   moveWindowLeft: () => ipcRenderer.invoke("move-window-left"),
   moveWindowRight: () => ipcRenderer.invoke("move-window-right"),
-  analyzeAudioFromBase64: (data: string, mimeType: string) => ipcRenderer.invoke("analyze-audio-base64", data, mimeType),
-  analyzeAudioFile: (path: string) => ipcRenderer.invoke("analyze-audio-file", path),
-  analyzeImageFile: (path: string) => ipcRenderer.invoke("analyze-image-file", path),
-  quitApp: () => ipcRenderer.invoke("quit-app")
+  analyzeAudioFromBase64: (data: string, mimeType: string) => 
+    ipcRenderer.invoke("analyze-audio-base64", data, mimeType),
+  analyzeAudioFile: (path: string) => 
+    ipcRenderer.invoke("analyze-audio-file", path),
+  analyzeImageFile: (path: string) => 
+    ipcRenderer.invoke("analyze-image-file", path),
+  quitApp: () => ipcRenderer.invoke("quit-app"),
+
+  // PRODUCTIVITY TRACKING APIS
+  generateDailyInsights: (date?: string) => 
+    ipcRenderer.invoke("generate-daily-insights", date),
+  getDailyStats: (date?: string) => 
+    ipcRenderer.invoke("get-daily-stats", date),
+  getHourlyBreakdown: (date?: string) => 
+    ipcRenderer.invoke("get-hourly-breakdown", date)
 } as ElectronAPI)
