@@ -1,32 +1,17 @@
 import React, { useState, useEffect } from 'react'
-import { Card } from '../components/ui/card'
+import { ViewType, ProductivityInsights, ProductivityStats } from '../types/navigation'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Loader } from '../components/ui/loader'
 
 interface InsightsProps {
-  setView: (view: "queue" | "solutions" | "debug" | "insights") => void
-}
-
-interface DailyInsights {
-  executiveSummary: string
-  productivityNarrative: string
-  behavioralPatterns: string
-  recommendations: string
-}
-
-interface DailyStats {
-  totalRecords: number
-  hoursTracked: number
-  focusPercentage: number
-  topApp: string
-  dayStart: string
-  dayEnd: string
+  setView: React.Dispatch<React.SetStateAction<ViewType>>
 }
 
 const Insights: React.FC<InsightsProps> = ({ setView }) => {
   const [loading, setLoading] = useState(false)
-  const [insights, setInsights] = useState<DailyInsights | null>(null)
-  const [stats, setStats] = useState<DailyStats | null>(null)
+  const [insights, setInsights] = useState<ProductivityInsights | null>(null)
+  const [stats, setStats] = useState<ProductivityStats | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [activeTab, setActiveTab] = useState<'summary' | 'narrative' | 'patterns' | 'recommendations'>('summary')
@@ -41,9 +26,13 @@ const Insights: React.FC<InsightsProps> = ({ setView }) => {
       const result = await window.electronAPI.getDailyStats(selectedDate)
       if (result.success && result.data) {
         setStats(result.data)
+        setError(null)
+      } else {
+        setError(result.error || 'Failed to load daily statistics')
       }
     } catch (err) {
       console.error('Error loading stats:', err)
+      setError('Failed to connect to productivity tracking service')
     }
   }
 
@@ -61,7 +50,7 @@ const Insights: React.FC<InsightsProps> = ({ setView }) => {
         setError(result.error || 'Failed to generate insights')
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred')
+      setError(err.message || 'An error occurred while generating insights')
     } finally {
       setLoading(false)
     }
@@ -73,6 +62,27 @@ const Insights: React.FC<InsightsProps> = ({ setView }) => {
         {paragraph}
       </p>
     ))
+  }
+
+  const getTabLabel = (tab: typeof activeTab): string => {
+    const labels = {
+      'summary': 'Summary',
+      'narrative': "Your Day's Story",
+      'patterns': 'Patterns',
+      'recommendations': 'Recommendations'
+    }
+    return labels[tab]
+  }
+
+  const getTabContent = (): string => {
+    if (!insights) return ''
+    const contentMap = {
+      'summary': insights.executiveSummary,
+      'narrative': insights.productivityNarrative,
+      'patterns': insights.behavioralPatterns,
+      'recommendations': insights.recommendations
+    }
+    return contentMap[activeTab]
   }
 
   return (
@@ -96,7 +106,7 @@ const Insights: React.FC<InsightsProps> = ({ setView }) => {
           value={selectedDate}
           onChange={(e) => setSelectedDate(e.target.value)}
           max={new Date().toISOString().split('T')[0]}
-          className="px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white"
+          className="px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white focus:outline-none focus:border-gray-500"
         />
         <Button
           onClick={generateInsights}
@@ -112,38 +122,59 @@ const Insights: React.FC<InsightsProps> = ({ setView }) => {
       {/* Quick Stats */}
       {stats && (
         <div className="grid grid-cols-4 gap-4 mb-6">
-          <Card className="bg-gray-900 border-gray-800 p-4">
-            <div className="text-xs text-gray-400 uppercase">Hours Tracked</div>
-            <div className="text-2xl font-bold">{stats.hoursTracked}h</div>
-            <div className="text-xs text-gray-500">{stats.dayStart} - {stats.dayEnd}</div>
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4">
+              <div className="text-xs text-gray-400 uppercase tracking-wide">Hours Tracked</div>
+              <div className="text-2xl font-bold mt-1">{stats.hoursTracked}h</div>
+              <div className="text-xs text-gray-500 mt-1">{stats.dayStart} - {stats.dayEnd}</div>
+            </CardContent>
           </Card>
-          <Card className="bg-gray-900 border-gray-800 p-4">
-            <div className="text-xs text-gray-400 uppercase">Focus Score</div>
-            <div className="text-2xl font-bold text-green-400">{stats.focusPercentage}%</div>
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4">
+              <div className="text-xs text-gray-400 uppercase tracking-wide">Focus Score</div>
+              <div className={`text-2xl font-bold mt-1 ${
+                stats.focusPercentage >= 70 ? 'text-green-400' : 
+                stats.focusPercentage >= 50 ? 'text-yellow-400' : 
+                'text-red-400'
+              }`}>
+                {stats.focusPercentage}%
+              </div>
+            </CardContent>
           </Card>
-          <Card className="bg-gray-900 border-gray-800 p-4">
-            <div className="text-xs text-gray-400 uppercase">Top App</div>
-            <div className="text-xl font-bold">{stats.topApp}</div>
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4">
+              <div className="text-xs text-gray-400 uppercase tracking-wide">Top App</div>
+              <div className="text-xl font-bold mt-1 truncate">{stats.topApp}</div>
+            </CardContent>
           </Card>
-          <Card className="bg-gray-900 border-gray-800 p-4">
-            <div className="text-xs text-gray-400 uppercase">Data Points</div>
-            <div className="text-2xl font-bold">{stats.totalRecords}</div>
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4">
+              <div className="text-xs text-gray-400 uppercase tracking-wide">Data Points</div>
+              <div className="text-2xl font-bold mt-1">{stats.totalRecords}</div>
+            </CardContent>
           </Card>
         </div>
       )}
 
       {/* Error or Minimum Data Warning */}
       {error && (
-        <Card className="bg-red-900/20 border-red-800 p-4 mb-6">
-          <p className="text-red-400">{error}</p>
+        <Card className="bg-red-900/20 border-red-800 mb-6">
+          <CardContent className="p-4">
+            <p className="text-red-400">{error}</p>
+          </CardContent>
         </Card>
       )}
 
-      {stats && stats.totalRecords < 5 && (
-        <Card className="bg-yellow-900/20 border-yellow-800 p-4 mb-6">
-          <p className="text-yellow-400">
-            Need at least 5 activities to generate insights. Current: {stats.totalRecords}
-          </p>
+      {stats && stats.totalRecords < 5 && !error && (
+        <Card className="bg-yellow-900/20 border-yellow-800 mb-6">
+          <CardContent className="p-4">
+            <p className="text-yellow-400">
+              Need at least 5 activities to generate insights. Current: {stats.totalRecords}
+            </p>
+            <p className="text-yellow-400/70 text-sm mt-2">
+              The tracker takes a screenshot every 45 seconds while you work.
+            </p>
+          </CardContent>
         </Card>
       )}
 
@@ -151,47 +182,42 @@ const Insights: React.FC<InsightsProps> = ({ setView }) => {
       {insights && (
         <>
           {/* Tab Navigation */}
-          <div className="flex gap-2 mb-6">
-            <Button
-              variant={activeTab === 'summary' ? 'default' : 'ghost'}
-              onClick={() => setActiveTab('summary')}
-              className="px-4 py-2"
-            >
-              Summary
-            </Button>
-            <Button
-              variant={activeTab === 'narrative' ? 'default' : 'ghost'}
-              onClick={() => setActiveTab('narrative')}
-              className="px-4 py-2"
-            >
-              Your Day's Story
-            </Button>
-            <Button
-              variant={activeTab === 'patterns' ? 'default' : 'ghost'}
-              onClick={() => setActiveTab('patterns')}
-              className="px-4 py-2"
-            >
-              Patterns
-            </Button>
-            <Button
-              variant={activeTab === 'recommendations' ? 'default' : 'ghost'}
-              onClick={() => setActiveTab('recommendations')}
-              className="px-4 py-2"
-            >
-              Recommendations
-            </Button>
+          <div className="flex gap-2 mb-6 border-b border-gray-800">
+            {(['summary', 'narrative', 'patterns', 'recommendations'] as const).map((tab) => (
+              <Button
+                key={tab}
+                variant={activeTab === tab ? 'default' : 'ghost'}
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 py-2 rounded-b-none ${
+                  activeTab === tab 
+                    ? 'bg-gray-800 text-white border-b-2 border-blue-500' 
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                {getTabLabel(tab)}
+              </Button>
+            ))}
           </div>
 
           {/* Content Display */}
-          <Card className="bg-gray-900 border-gray-800 p-8">
-            <div className="prose prose-invert max-w-none">
-              {activeTab === 'summary' && formatContent(insights.executiveSummary)}
-              {activeTab === 'narrative' && formatContent(insights.productivityNarrative)}
-              {activeTab === 'patterns' && formatContent(insights.behavioralPatterns)}
-              {activeTab === 'recommendations' && formatContent(insights.recommendations)}
-            </div>
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-8">
+              <div className="prose prose-invert max-w-none">
+                {formatContent(getTabContent())}
+              </div>
+            </CardContent>
           </Card>
         </>
+      )}
+
+      {/* Empty State */}
+      {!stats && !error && (
+        <Card className="bg-gray-900 border-gray-800">
+          <CardContent className="p-12 text-center">
+            <Loader className="h-8 w-8 mx-auto mb-4" />
+            <p className="text-gray-400">Loading productivity data...</p>
+          </CardContent>
+        </Card>
       )}
     </div>
   )

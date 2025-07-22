@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from "react"
 import { useQuery, useQueryClient } from "react-query"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
 import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism"
+import { ViewType } from "../types/navigation"
 
 import ScreenshotQueue from "../components/Queue/ScreenshotQueue"
 import {
@@ -16,8 +17,6 @@ import { ProblemStatementData } from "../types/solutions"
 import { AudioResult } from "../types/audio"
 import SolutionCommands from "../components/Solutions/SolutionCommands"
 import Debug from "./Debug"
-
-// (Using global ElectronAPI type from src/types/electron.d.ts)
 
 export const ContentSection = ({
   title,
@@ -45,6 +44,7 @@ export const ContentSection = ({
     )}
   </div>
 )
+
 const SolutionSection = ({
   title,
   content,
@@ -125,8 +125,9 @@ export const ComplexitySection = ({
 )
 
 interface SolutionsProps {
-  setView: React.Dispatch<React.SetStateAction<"queue" | "solutions" | "debug">>
+  setView: React.Dispatch<React.SetStateAction<ViewType>>
 }
+
 const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
   const queryClient = useQueryClient()
   const contentRef = useRef<HTMLDivElement>(null)
@@ -195,7 +196,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
       )
 
       if (response.success) {
-        refetch() // Refetch screenshots instead of managing state directly
+        refetch()
       } else {
         console.error("Failed to delete extra screenshot:", response.error)
       }
@@ -379,7 +380,7 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
       resizeObserver.disconnect()
       cleanupFunctions.forEach((cleanup) => cleanup())
     }
-  }, [isTooltipVisible, tooltipHeight])
+  }, [isTooltipVisible, tooltipHeight, setView])
 
   useEffect(() => {
     setProblemStatementData(

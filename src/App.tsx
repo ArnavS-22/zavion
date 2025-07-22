@@ -5,30 +5,7 @@ import { useEffect, useRef, useState } from "react"
 import Solutions from "./_pages/Solutions"
 import Insights from "./_pages/Insights"
 import { QueryClient, QueryClientProvider } from "react-query"
-
-// Production-ready type definitions for productivity tracking
-interface ProductivityInsights {
-  executiveSummary: string
-  productivityNarrative: string
-  behavioralPatterns: string
-  recommendations: string
-}
-
-interface ProductivityStats {
-  totalRecords: number
-  hoursTracked: number
-  focusPercentage: number
-  topApp: string
-  dayStart: string
-  dayEnd: string
-}
-
-interface HourlyBreakdownItem {
-  hour: number
-  count: number
-  focusCount: number
-  goalRelatedCount: number
-}
+import { ViewType, ProductivityInsights, ProductivityStats, HourlyBreakdownItem } from "./types/navigation"
 
 declare global {
   interface Window {
@@ -66,7 +43,7 @@ declare global {
       analyzeAudioFromBase64: (data: string, mimeType: string) => Promise<{ text: string; timestamp: number }>
       analyzeAudioFile: (path: string) => Promise<{ text: string; timestamp: number }>
 
-      // PRODUCTIVITY TRACKING APIS - Now with proper types
+      // PRODUCTIVITY TRACKING APIS
       generateDailyInsights: (date?: string) => Promise<{
         success: boolean
         error?: string
@@ -100,14 +77,11 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: Infinity,
       cacheTime: Infinity,
-      retry: 2, // Add retry logic for production
-      refetchOnWindowFocus: false // Disable refetch on focus for productivity app
+      retry: 2,
+      refetchOnWindowFocus: false
     }
   }
 })
-
-// Export view type for use in other components
-export type ViewType = "queue" | "solutions" | "debug" | "insights"
 
 const App: React.FC = () => {
   const [view, setView] = useState<ViewType>("queue")
@@ -121,7 +95,6 @@ const App: React.FC = () => {
       queryClient.invalidateQueries(["problem_statement"])
       queryClient.invalidateQueries(["solution"])
       queryClient.invalidateQueries(["new_solution"])
-      // Also invalidate productivity queries
       queryClient.invalidateQueries(["daily-insights"])
       queryClient.invalidateQueries(["daily-stats"])
       queryClient.invalidateQueries(["hourly-breakdown"])
@@ -185,14 +158,12 @@ const App: React.FC = () => {
         setView("queue")
         console.log("Unauthorized")
       }),
-      // Update this reset handler
       window.electronAPI.onResetView(() => {
         console.log("Received 'reset-view' message from main process")
 
         queryClient.removeQueries(["screenshots"])
         queryClient.removeQueries(["solution"])
         queryClient.removeQueries(["problem_statement"])
-        // Clear productivity cache on reset
         queryClient.removeQueries(["daily-insights"])
         queryClient.removeQueries(["daily-stats"])
         queryClient.removeQueries(["hourly-breakdown"])
@@ -208,7 +179,7 @@ const App: React.FC = () => {
       })
     ]
     return () => cleanupFunctions.forEach((cleanup) => cleanup())
-  }, [view]) // Add view dependency to prevent stale closures
+  }, [view])
 
   return (
     <div ref={containerRef} className="min-h-0">
@@ -221,7 +192,6 @@ const App: React.FC = () => {
           ) : view === "insights" ? (
             <Insights setView={setView} />
           ) : view === "debug" ? (
-            // Handle debug view - you might want to add a Debug component
             <Solutions setView={setView} />
           ) : null}
           <ToastViewport />
@@ -232,6 +202,3 @@ const App: React.FC = () => {
 }
 
 export default App
-
-// Export types for use in other components
-export type { ProductivityInsights, ProductivityStats, HourlyBreakdownItem }
