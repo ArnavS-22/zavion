@@ -111,6 +111,10 @@ electron_1.contextBridge.exposeInMainWorld("electronAPI", {
     analyzeAudioFromBase64: (data, mimeType) => electron_1.ipcRenderer.invoke("analyze-audio-base64", data, mimeType),
     analyzeAudioFile: (path) => electron_1.ipcRenderer.invoke("analyze-audio-file", path),
     analyzeImageFile: (path) => electron_1.ipcRenderer.invoke("analyze-image-file", path),
-    quitApp: () => electron_1.ipcRenderer.invoke("quit-app")
+    quitApp: () => electron_1.ipcRenderer.invoke("quit-app"),
+    // PRODUCTIVITY TRACKING APIS
+    generateDailyInsights: (date) => electron_1.ipcRenderer.invoke("generate-daily-insights", date),
+    getDailyStats: (date) => electron_1.ipcRenderer.invoke("get-daily-stats", date),
+    getHourlyBreakdown: (date) => electron_1.ipcRenderer.invoke("get-hourly-breakdown", date)
 });
 //# sourceMappingURL=preload.js.map
