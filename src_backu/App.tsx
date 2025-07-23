@@ -1,11 +1,11 @@
-import React from 'react';
+import React from 'react'
 import { ToastProvider } from "./components/ui/toast"
 import Queue from "./_pages/Queue"
 import { ToastViewport } from "@radix-ui/react-toast"
 import { useEffect, useRef, useState } from "react"
 import Solutions from "./_pages/Solutions"
 import Insights from "./_pages/Insights"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { QueryClient, QueryClientProvider } from "react-query"
 import { ViewType, ProductivityInsights, ProductivityStats, HourlyBreakdownItem } from "./types/navigation"
 
 declare global {
