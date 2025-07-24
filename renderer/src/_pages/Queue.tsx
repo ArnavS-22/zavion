@@ -12,6 +12,8 @@ import {
 import QueueCommands from "../components/Queue/QueueCommands"
 import { Button } from "../components/ui/button"
 
+type Screenshot = { path: string; preview: string }
+
 interface QueueProps {
   setView: React.Dispatch<React.SetStateAction<ViewType>>
 }
@@ -28,9 +30,9 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
   const [tooltipHeight, setTooltipHeight] = useState(0)
   const contentRef = useRef<HTMLDivElement>(null)
 
-  const { data: screenshots = [], refetch } = useQuery<Array<{ path: string; preview: string }>, Error>(
-    ["screenshots"],
-    async () => {
+  const { data: screenshots = [], refetch } = useQuery({
+    queryKey: ["screenshots"],
+    queryFn: async (): Promise<Screenshot[]> => {
       try {
         const existing = await window.electronAPI.getScreenshots()
         return existing
@@ -40,13 +42,11 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
         return []
       }
     },
-    {
-      staleTime: Infinity,
-      cacheTime: Infinity,
-      refetchOnWindowFocus: true,
-      refetchOnMount: true
-    }
-  )
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true
+  })
 
   const showToast = (
     title: string,

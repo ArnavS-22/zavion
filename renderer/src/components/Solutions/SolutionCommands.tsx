@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from "react"
-import { IoLogOutOutline } from "react-icons/io5"
+import { IoExitOutline } from "react-icons/io5"
+
+// Type assertion to fix react-icons TypeScript issue
+const ExitIcon = IoExitOutline as React.ComponentType<{ className?: string }>
 
 interface SolutionCommandsProps {
   extraScreenshots: any[]
@@ -204,7 +207,7 @@ const SolutionCommands: React.FC<SolutionCommandsProps> = ({
             title="Sign Out"
             onClick={() => window.electronAPI.quitApp()}
           >
-            <IoLogOutOutline className="w-4 h-4" />
+            <ExitIcon className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -213,4 +216,3 @@ const SolutionCommands: React.FC<SolutionCommandsProps> = ({
 }
 
 export default SolutionCommands
-

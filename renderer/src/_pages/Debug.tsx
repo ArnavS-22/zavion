@@ -15,6 +15,8 @@ import {
 import ExtraScreenshotsQueueHelper from "../components/Solutions/SolutionCommands"
 import { diffLines } from "diff"
 
+type Screenshot = { path: string; preview: string }
+
 type DiffLine = {
   value: string
   added?: boolean
@@ -227,7 +229,7 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
 
   const { data: extraScreenshots = [], refetch } = useQuery({
     queryKey: ["extras"],
-    queryFn: async () => {
+    queryFn: async (): Promise<Screenshot[]> => {
       try {
         const existing = await window.electronAPI.getScreenshots()
         return existing
@@ -237,7 +239,7 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
       }
     },
     staleTime: Infinity,
-    cacheTime: Infinity
+    gcTime: Infinity
   })
 
   const showToast = (
@@ -416,4 +418,3 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
 }
 
 export default Debug
-

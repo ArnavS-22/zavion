@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from "react"
-import { IoLogOutOutline } from "react-icons/io5"
+import { IoExitOutline } from "react-icons/io5"
+
+// Type assertion to fix react-icons TypeScript issue
+const ExitIcon = IoExitOutline as React.ComponentType<{ className?: string }>
 
 interface QueueCommandsProps {
   onTooltipVisibilityChange: (visible: boolean, height: number) => void
@@ -220,7 +223,7 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
           title="Sign Out"
           onClick={() => window.electronAPI.quitApp()}
         >
-          <IoLogOutOutline className="w-4 h-4" />
+          <ExitIcon className="w-4 h-4" />
         </button>
       </div>
       {/* Audio Result Display */}
@@ -234,4 +237,3 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
 }
 
 export default QueueCommands
-

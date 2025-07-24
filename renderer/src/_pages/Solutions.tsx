@@ -18,6 +18,8 @@ import { AudioResult } from "../types/audio"
 import SolutionCommands from "../components/Solutions/SolutionCommands"
 import Debug from "./Debug"
 
+type Screenshot = { path: string; preview: string }
+
 export const ContentSection = ({
   title,
   content,
@@ -161,9 +163,9 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
 
   const [isResetting, setIsResetting] = useState(false)
 
-  const { data: extraScreenshots = [], refetch } = useQuery<Array<{ path: string; preview: string }>, Error>(
-    ["extras"],
-    async () => {
+  const { data: extraScreenshots = [], refetch } = useQuery({
+    queryKey: ["extras"],
+    queryFn: async (): Promise<Screenshot[]> => {
       try {
         const existing = await window.electronAPI.getScreenshots()
         return existing
@@ -172,11 +174,9 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
         return []
       }
     },
-    {
-      staleTime: Infinity,
-      cacheTime: Infinity
-    }
-  )
+    staleTime: Infinity,
+    gcTime: Infinity
+  })
 
   const showToast = (
     title: string,
@@ -236,8 +236,8 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
         setIsResetting(true)
 
         // Clear the queries
-        queryClient.removeQueries(["solution"])
-        queryClient.removeQueries(["new_solution"])
+        queryClient.removeQueries({ queryKey: ["solution"] })
+        queryClient.removeQueries({ queryKey: ["new_solution"] })
 
         // Reset other states
         refetch()
@@ -565,3 +565,4 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
 }
 
 export default Solutions
+                  

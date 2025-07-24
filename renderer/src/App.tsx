@@ -77,7 +77,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: Infinity,
-      cacheTime: Infinity,
+      gcTime: Infinity, // Changed from cacheTime to gcTime
       retry: 2,
       refetchOnWindowFocus: false
     }
@@ -92,13 +92,13 @@ const App: React.FC = () => {
   useEffect(() => {
     const cleanup = window.electronAPI.onResetView(() => {
       console.log("Received 'reset-view' message from main process.")
-      queryClient.invalidateQueries(["screenshots"])
-      queryClient.invalidateQueries(["problem_statement"])
-      queryClient.invalidateQueries(["solution"])
-      queryClient.invalidateQueries(["new_solution"])
-      queryClient.invalidateQueries(["daily-insights"])
-      queryClient.invalidateQueries(["daily-stats"])
-      queryClient.invalidateQueries(["hourly-breakdown"])
+      queryClient.invalidateQueries({ queryKey: ["screenshots"] })
+      queryClient.invalidateQueries({ queryKey: ["problem_statement"] })
+      queryClient.invalidateQueries({ queryKey: ["solution"] })
+      queryClient.invalidateQueries({ queryKey: ["new_solution"] })
+      queryClient.invalidateQueries({ queryKey: ["daily-insights"] })
+      queryClient.invalidateQueries({ queryKey: ["daily-stats"] })
+      queryClient.invalidateQueries({ queryKey: ["hourly-breakdown"] })
       setView("queue")
     })
 
@@ -153,28 +153,28 @@ const App: React.FC = () => {
       }),
 
       window.electronAPI.onUnauthorized(() => {
-        queryClient.removeQueries(["screenshots"])
-        queryClient.removeQueries(["solution"])
-        queryClient.removeQueries(["problem_statement"])
+        queryClient.removeQueries({ queryKey: ["screenshots"] })
+        queryClient.removeQueries({ queryKey: ["solution"] })
+        queryClient.removeQueries({ queryKey: ["problem_statement"] })
         setView("queue")
         console.log("Unauthorized")
       }),
       window.electronAPI.onResetView(() => {
         console.log("Received 'reset-view' message from main process")
 
-        queryClient.removeQueries(["screenshots"])
-        queryClient.removeQueries(["solution"])
-        queryClient.removeQueries(["problem_statement"])
-        queryClient.removeQueries(["daily-insights"])
-        queryClient.removeQueries(["daily-stats"])
-        queryClient.removeQueries(["hourly-breakdown"])
+        queryClient.removeQueries({ queryKey: ["screenshots"] })
+        queryClient.removeQueries({ queryKey: ["solution"] })
+        queryClient.removeQueries({ queryKey: ["problem_statement"] })
+        queryClient.removeQueries({ queryKey: ["daily-insights"] })
+        queryClient.removeQueries({ queryKey: ["daily-stats"] })
+        queryClient.removeQueries({ queryKey: ["hourly-breakdown"] })
         setView("queue")
         console.log("View reset to 'queue' via Command+R shortcut")
       }),
       window.electronAPI.onProblemExtracted((data: any) => {
         if (view === "queue") {
           console.log("Problem extracted successfully")
-          queryClient.invalidateQueries(["problem_statement"])
+          queryClient.invalidateQueries({ queryKey: ["problem_statement"] })
           queryClient.setQueryData(["problem_statement"], data)
         }
       })
