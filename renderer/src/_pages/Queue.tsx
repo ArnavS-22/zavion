@@ -30,9 +30,9 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
   const [tooltipHeight, setTooltipHeight] = useState(0)
   const contentRef = useRef<HTMLDivElement>(null)
 
-  const { data: screenshots = [], refetch } = useQuery({
-    queryKey: ["screenshots"],
-    queryFn: async (): Promise<Screenshot[]> => {
+  const { data: screenshots = [], refetch } = useQuery(
+    ["screenshots"],
+    async (): Promise<Screenshot[]> => {
       try {
         const existing = await window.electronAPI.getScreenshots()
         return existing
@@ -42,11 +42,13 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
         return []
       }
     },
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnWindowFocus: true,
-    refetchOnMount: true
-  })
+    {
+      staleTime: Infinity,
+      cacheTime: Infinity,
+      refetchOnWindowFocus: true,
+      refetchOnMount: true
+    }
+  )
 
   const showToast = (
     title: string,

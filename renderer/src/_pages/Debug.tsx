@@ -227,9 +227,9 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
   const [isTooltipVisible, setIsTooltipVisible] = useState(false)
   const [tooltipHeight, setTooltipHeight] = useState(0)
 
-  const { data: extraScreenshots = [], refetch } = useQuery({
-    queryKey: ["extras"],
-    queryFn: async (): Promise<Screenshot[]> => {
+  const { data: extraScreenshots = [], refetch } = useQuery(
+    ["extras"],
+    async (): Promise<Screenshot[]> => {
       try {
         const existing = await window.electronAPI.getScreenshots()
         return existing
@@ -238,9 +238,11 @@ const Debug: React.FC<DebugProps> = ({ isProcessing, setIsProcessing }) => {
         return []
       }
     },
-    staleTime: Infinity,
-    gcTime: Infinity
-  })
+    {
+      staleTime: Infinity,
+      cacheTime: Infinity
+    }
+  )
 
   const showToast = (
     title: string,
