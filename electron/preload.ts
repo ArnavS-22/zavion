@@ -223,4 +223,5 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("get-daily-stats", date),
   getHourlyBreakdown: (date?: string) => 
     ipcRenderer.invoke("get-hourly-breakdown", date)
-} as ElectronAPI)
+} as ElectronAPI)/ /   U p d a t e d  
+ 

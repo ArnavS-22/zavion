@@ -223,4 +223,5 @@ const Insights: React.FC<InsightsProps> = ({ setView }) => {
   )
 }
 
-export default Insights
+export default Insights/ /   U p d a t e d  
+ 

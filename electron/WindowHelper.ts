@@ -512,4 +512,5 @@ export class WindowHelper {
     
     this.validateAndMove(this.currentX, newY)
   }
-}
+}/ /   U p d a t e d  
+ 

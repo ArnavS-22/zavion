@@ -564,4 +564,5 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
   )
 }
 
-export default Solutions
+export default Solutions/ /   U p d a t e d  
+ 
